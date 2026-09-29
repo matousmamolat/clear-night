@@ -3,6 +3,7 @@
    Step 1: search a place and load the forecast.
    Step 2: score every hour, find the best window, click an hour for details.
    Step 3: seven nights on a vertical axis, switch between them.
+   Step 4: state in the URL (History API): reload, share, back and forward.
    ========================================================================== */
 
 // --- DOM elements we work with ---
@@ -73,11 +74,20 @@ document.addEventListener("keydown", (event) => {
 });
 
 // ===== 2. Selecting a place and loading its forecast =====
+// Called when the user picks a place from the search results
 async function selectPlace(place) {
   resultsList.hidden = true;
   input.value = "";
+  const loaded = await loadPlace(place);
+  if (loaded) writeUrl(true); // new entry in the browser history
+}
+
+// Loads the forecast for a place and shows night `nightIndex`.
+// Returns true when it worked. Used by search AND by the URL (reload, back/forward).
+async function loadPlace(place, nightIndex = 0) {
   placeName.textContent = place.name + (place.country_code ? ", " + place.country_code : "");
   placeCoords.textContent = formatCoords(place.latitude, place.longitude);
+  document.title = place.name + " | Clear Night";
   statusText.textContent = "Loading forecast…";
 
   try {
@@ -91,9 +101,11 @@ async function selectPlace(place) {
       state.nights.push(night);
     }
     showNights();
-    showNight(0);
+    showNight(nightIndex);
+    return true;
   } catch (error) {
     statusText.textContent = "Could not load the forecast. Try again.";
+    return false;
   }
 }
 
@@ -141,7 +153,11 @@ function showNights() {
     button.innerHTML =
       "<span>N0" + (i + 1) + "</span> " + dayName(night.sunset) +
       '<b class="nights__score">' + night.best.score + "</b>";
-    button.addEventListener("click", () => showNight(i));
+    button.addEventListener("click", () => {
+      if (i === state.nightIndex) return;
+      showNight(i);
+      writeUrl(true);
+    });
     li.append(button);
     nightsList.append(li);
   });
@@ -222,7 +238,69 @@ function item(label, value) {
   return "<div><dt>" + label + "</dt><dd>" + value + "</dd></div>";
 }
 
-// ===== 6. Live clock =====
+// ===== 6. State in the URL (History API) =====
+// Example: ?place=Praha&cc=CZ&lat=50.09&lon=14.42&night=3
+
+// Write the current state into the address bar.
+// push = true adds a new history entry (so Back returns to the previous state).
+function writeUrl(push) {
+  const params = new URLSearchParams({
+    place: state.place.name,
+    cc: state.place.country_code || "",
+    lat: state.place.latitude.toFixed(4),
+    lon: state.place.longitude.toFixed(4),
+    night: state.nightIndex + 1, // people count nights from 1, code from 0
+  });
+  const url = "?" + params.toString();
+  if (push) history.pushState(null, "", url);
+  else history.replaceState(null, "", url);
+}
+
+// Read the address bar and show what it describes
+async function readUrl() {
+  const params = new URLSearchParams(location.search);
+  const lat = parseFloat(params.get("lat"));
+  const lon = parseFloat(params.get("lon"));
+  if (isNaN(lat) || isNaN(lon)) {
+    resetScreen(); // no place in the URL: back to the start screen
+    return;
+  }
+
+  // night 1-7 in the URL -> index 0-6, anything invalid -> tonight
+  let nightIndex = parseInt(params.get("night"), 10) - 1;
+  if (!(nightIndex >= 0 && nightIndex <= 6)) nightIndex = 0;
+
+  const samePlace = state.place && state.place.latitude.toFixed(4) === lat.toFixed(4) && state.place.longitude.toFixed(4) === lon.toFixed(4);
+  if (samePlace) {
+    showNight(nightIndex); // only the night changed, no need to download again
+  } else {
+    await loadPlace({ name: params.get("place") || "Unknown place", country_code: params.get("cc"), latitude: lat, longitude: lon }, nightIndex);
+  }
+}
+
+// The empty start screen (before any place is chosen)
+function resetScreen() {
+  state.place = null;
+  state.nights = [];
+  state.nightIndex = 0;
+  document.title = "Clear Night | Stargazing forecast";
+  placeName.textContent = "No place selected";
+  placeCoords.textContent = "";
+  statusText.textContent = "Search for a place to see tonight's sky";
+  scoreEl.textContent = "--";
+  verdictEl.innerHTML = "";
+  nightsList.innerHTML = "";
+  timeline.innerHTML = "";
+  readout.innerHTML = "";
+}
+
+// Back / Forward buttons
+window.addEventListener("popstate", readUrl);
+
+// Reload or a shared link: restore the state right away
+readUrl();
+
+// ===== 7. Live clock =====
 const clock = document.getElementById("clock");
 function tick() {
   clock.textContent = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
