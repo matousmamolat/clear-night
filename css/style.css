@@ -113,6 +113,41 @@ body > .top { z-index: 10; }
 }
 .score__verdict span { display: block; margin-top: 4px; font-family: var(--mono); font-size: 12px; font-weight: 400; letter-spacing: 0.06em; color: var(--dim); }
 
+/* seven nights as a vertical axis with dots (Brandon C. Johnson) */
+.nights {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 28px;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.nights::before { content: ""; position: absolute; left: 5px; top: 6px; bottom: 6px; width: 1px; background: var(--line); }
+.nights li { position: relative; }
+.nights button {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.nights button:hover, .nights button:focus-visible { color: var(--ink); outline: none; }
+.nights__score { margin-left: auto; padding-left: 16px; font-weight: 400; }
+.nights li::before { content: ""; position: absolute; left: -27px; top: 50%; width: 9px; height: 9px; margin-top: -5px; border-radius: 50%; background: var(--dim); opacity: 0.5; }
+.nights li.is-active { color: var(--ink); }
+.nights li.is-active::before { background: var(--bg); border: 1px solid var(--ink); opacity: 1; width: 13px; height: 13px; left: -29px; margin-top: -7px; }
+
+
 /* the night as an instrument: one bar per hour */
 .instrument { padding: 32px var(--gutter) 20px; }
 .timeline {
@@ -229,7 +264,13 @@ body > .top { z-index: 10; }
 .bottom a { text-decoration: underline; text-underline-offset: 0.2em; }
 
 @media (max-width: 760px) {
-  .stage { grid-template-columns: 1fr; gap: 24px; }
+  .stage { grid-template-columns: 1fr; gap: 24px; padding-top: 24px; }
+  .nights { display: flex; gap: 18px; padding: 16px 0 0; overflow-x: auto; }
+  .nights::before { left: 0; right: 0; top: 4px; bottom: auto; width: auto; height: 1px; }
+  .nights button { flex-direction: column; gap: 2px; padding: 10px 0 0; white-space: nowrap; }
+  .nights__score { margin-left: 0; padding-left: 0; }
+  .nights li::before { left: 0; top: 0; margin-top: 0; }
+  .nights li.is-active::before { left: -2px; top: -2px; margin-top: 0; }
   .top { flex-wrap: wrap; gap: 12px; }
   .search { width: 100%; }
   .readout { grid-template-columns: repeat(2, minmax(0, 1fr)); }

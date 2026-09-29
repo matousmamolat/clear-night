@@ -2,6 +2,7 @@
    app.js: user interface
    Step 1: search a place and load the forecast.
    Step 2: score every hour, find the best window, click an hour for details.
+   Step 3: seven nights on a vertical axis, switch between them.
    ========================================================================== */
 
 // --- DOM elements we work with ---
@@ -15,6 +16,14 @@ const scoreEl = document.getElementById("score");
 const verdictEl = document.getElementById("verdict");
 const timeline = document.getElementById("timeline");
 const readout = document.getElementById("readout");
+const nightsList = document.getElementById("nights");
+
+// --- Application state: everything the screen is built from ---
+const state = {
+  place: null,      // the selected place from the geocoding API
+  nights: [],       // 7 nights, each { sunset, sunrise, hours, scores, best }
+  nightIndex: 0,    // which night is shown (0 = tonight)
+};
 
 // ===== 1. Searching =====
 form.addEventListener("submit", async (event) => {
@@ -73,8 +82,16 @@ async function selectPlace(place) {
 
   try {
     const forecast = await getForecast(place.latitude, place.longitude);
-    const night = getNight(forecast, 0); // 0 = tonight
-    showNight(night);
+    state.place = place;
+    state.nights = [];
+    for (let i = 0; i < 7; i++) {
+      const night = getNight(forecast, i);
+      night.scores = scoreNight(night.hours); // score.js
+      night.best = bestWindow(night.scores);
+      state.nights.push(night);
+    }
+    showNights();
+    showNight(0);
   } catch (error) {
     statusText.textContent = "Could not load the forecast. Try again.";
   }
@@ -114,12 +131,38 @@ function getNight(forecast, index) {
   return { sunset, sunrise, hours };
 }
 
-// ===== 4. Showing the night =====
-function showNight(night) {
-  const scores = scoreNight(night.hours);  // score.js
-  const best = bestWindow(scores);          // 3 best hours in a row
+// ===== 4. The seven nights =====
+function showNights() {
+  nightsList.innerHTML = "";
+  state.nights.forEach((night, i) => {
+    const li = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.innerHTML =
+      "<span>N0" + (i + 1) + "</span> " + dayName(night.sunset) +
+      '<b class="nights__score">' + night.best.score + "</b>";
+    button.addEventListener("click", () => showNight(i));
+    li.append(button);
+    nightsList.append(li);
+  });
+}
 
-  statusText.textContent = "Tonight's score / 100";
+// "2026-09-29T18:45" -> "Tue"
+function dayName(isoTime) {
+  return new Date(isoTime.slice(0, 10) + "T12:00").toLocaleDateString("en-GB", { weekday: "short" });
+}
+
+// ===== 5. Showing one night =====
+function showNight(index) {
+  state.nightIndex = index;
+  const night = state.nights[index];
+  const scores = night.scores;
+  const best = night.best;
+
+  // highlight the active night on the axis
+  [...nightsList.children].forEach((li, i) => li.classList.toggle("is-active", i === index));
+
+  statusText.textContent = (index === 0 ? "Tonight" : dayName(night.sunset) + " night") + " / score out of 100";
   scoreEl.textContent = best.score;
   verdictEl.innerHTML =
     verdict(best.score) +
@@ -179,7 +222,7 @@ function item(label, value) {
   return "<div><dt>" + label + "</dt><dd>" + value + "</dd></div>";
 }
 
-// ===== 5. Live clock =====
+// ===== 6. Live clock =====
 const clock = document.getElementById("clock");
 function tick() {
   clock.textContent = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
