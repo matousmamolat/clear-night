@@ -5,6 +5,7 @@
    Step 3: seven nights on a vertical axis, switch between them.
    Step 4: state in the URL (History API): reload, share, back and forward.
    Step 5: favourite places in localStorage (save, rename, delete).
+   Step 6: the Moon in the score and the real sky in the background (astro.js, sky.js).
    ========================================================================== */
 
 // --- DOM elements we work with ---
@@ -110,7 +111,7 @@ async function loadPlace(place, nightIndex = 0) {
     state.place = place;
     state.nights = [];
     for (let i = 0; i < 7; i++) {
-      const night = getNight(forecast, i);
+      const night = getNight(forecast, i, place);
       night.scores = scoreNight(night.hours); // score.js
       night.best = bestWindow(night.scores);
       state.nights.push(night);
@@ -133,7 +134,7 @@ function formatCoords(lat, lon) {
 
 // ===== 3. Cutting one night out of the hourly data =====
 // A night = the hours from sunset on day N to sunrise on day N + 1.
-function getNight(forecast, index) {
+function getNight(forecast, index, place) {
   const sunset = forecast.daily.sunset[index];       // e.g. "2026-09-29T18:45"
   const sunrise = forecast.daily.sunrise[index + 1]; // next morning
   const h = forecast.hourly;
@@ -154,6 +155,13 @@ function getNight(forecast, index) {
         rain: h.precipitation_probability[i],
         wind: h.wind_speed_10m[i],
       });
+      // the real moment of this hour and where the Moon is (astro.js)
+      const hour = hours[hours.length - 1];
+      hour.date = localTimeToDate(h.time[i], forecast.utc_offset_seconds);
+      const moon = moonAt(hour.date, place.latitude, place.longitude);
+      hour.moonAlt = moon.alt;
+      hour.moonIllum = moon.illumination;
+      hour.moonWaxing = moon.waxing;
     }
   }
   return { sunset, sunrise, hours };
@@ -241,7 +249,12 @@ function selectHour(col, hour, score) {
     item("Humidity", hour.humidity + " %") +
     item("Visibility", (hour.visibility / 1000).toFixed(1) + " km") +
     item("Rain chance", hour.rain + " %") +
-    item("Wind", hour.wind + " km/h");
+    item("Wind", hour.wind + " km/h") +
+    item("Moon", Math.round(hour.moonIllum * 100) + " % " + (hour.moonWaxing ? "waxing" : "waning") +
+      (hour.moonAlt > 0 ? " · " + Math.round(hour.moonAlt) + "° up" : " · set"));
+
+  // show the sky exactly as it will look from this place at this hour (sky.js)
+  drawSky(hour.date, state.place.latitude, state.place.longitude);
 }
 
 // "2026-09-29T23:00" -> "23:00"; with plusHours = 1 -> "00:00" (end of that hour)
@@ -309,12 +322,15 @@ function resetScreen() {
   timeline.innerHTML = "";
   readout.innerHTML = "";
   saveButton.hidden = true;
+  drawSky(new Date(), 50.09, 14.42); // start screen: tonight's sky over Prague, right now
 }
 
 // Back / Forward buttons
 window.addEventListener("popstate", readUrl);
 
-// Reload or a shared link: restore the state right away
+// Start: draw the current sky over Prague, then restore the state from the URL
+drawSky(new Date(), 50.09, 14.42);
+loadSky();
 readUrl();
 
 // ===== 7. Favourite places (localStorage, see places.js) =====

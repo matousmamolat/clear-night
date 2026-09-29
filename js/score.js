@@ -29,6 +29,10 @@ function scoreHour(hour, isTwilight) {
   score *= fade(hour.wind, 20, 50, 0.7);                  // wind shakes the telescope
   if (isTwilight) score *= 0.6;                           // sky not fully dark yet
 
+  // 3) Moon: a bright Moon above the horizon lights up the whole sky.
+  //    Full Moon 20 degrees or higher = half the score; below the horizon = no effect.
+  if (hour.moonAlt > 0) score *= 1 - 0.5 * hour.moonIllum * clamp(hour.moonAlt / 20, 0, 1);
+
   return Math.round(clamp(score, 0, 100));
 }
 
