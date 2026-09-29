@@ -35,8 +35,14 @@
     <span id="place-coords"></span>
   </div>
 
+  <noscript>
+    <p class="noscript">Clear Night needs JavaScript to download the forecast and draw the sky. Please turn JavaScript on.</p>
+  </noscript>
+
   <main class="stage">
-    <section class="score" aria-live="polite">
+    <h1 class="visually-hidden">Clear Night: stargazing forecast</h1>
+    <section class="score" aria-live="polite" aria-labelledby="score-heading">
+      <h2 class="visually-hidden" id="score-heading">Observing score</h2>
       <p class="label" id="status">Search for a place to see tonight's sky</p>
       <p class="score__num" id="score">--</p>
       <p class="score__verdict" id="verdict"></p>
@@ -52,7 +58,7 @@
 
   <footer class="bottom">
     <span class="live">Local time <b id="clock">--:--</b></span>
-    <span>Weather: <a href="https://open-meteo.com/">Open-Meteo</a> · Stars: ESA Hipparcos via <a href="https://github.com/ofrohn/d3-celestial">d3-celestial</a></span>
+    <span>Weather data by <a href="https://open-meteo.com/">Open-Meteo.com</a> (CC BY 4.0) · Stars: ESA Hipparcos via <a href="https://github.com/ofrohn/d3-celestial">d3-celestial</a></span>
   </footer>
 
   <script src="js/api.js"></script>

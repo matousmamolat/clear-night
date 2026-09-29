@@ -263,6 +263,7 @@ body > .corners { z-index: 3; } /* the big score overlaps this row, keep the Sav
   white-space: nowrap;
 }
 .bottom a { text-decoration: underline; text-underline-offset: 0.2em; }
+.noscript { margin: 24px var(--gutter) 0; padding: 12px 16px; border: 1px solid var(--line); font-family: var(--mono); font-size: 13px; }
 
 
 /* --- save button next to the place name --- */
