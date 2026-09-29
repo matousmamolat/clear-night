@@ -1,6 +1,7 @@
 /* ==========================================================================
    app.js: user interface
-   Step 1: search a place, load the forecast, show tonight hour by hour.
+   Step 1: search a place and load the forecast.
+   Step 2: score every hour, find the best window, click an hour for details.
    ========================================================================== */
 
 // --- DOM elements we work with ---
@@ -114,36 +115,64 @@ function getNight(forecast, index) {
 }
 
 // ===== 4. Showing the night =====
-// Step 1 shows how clear each hour is (100 - cloud cover).
-// Step 2 will replace this with a real observing score.
 function showNight(night) {
-  const clear = night.hours.map((hour) => 100 - hour.cloud);
-  const average = Math.round(clear.reduce((sum, x) => sum + x, 0) / clear.length);
+  const scores = scoreNight(night.hours);  // score.js
+  const best = bestWindow(scores);          // 3 best hours in a row
 
-  statusText.textContent = "Tonight: clear sky / 100";
-  scoreEl.textContent = average;
-  verdictEl.innerHTML = "Sunset " + night.sunset.slice(11) + "<span>Sunrise " + night.sunrise.slice(11) + "</span>";
+  statusText.textContent = "Tonight's score / 100";
+  scoreEl.textContent = best.score;
+  verdictEl.innerHTML =
+    verdict(best.score) +
+    "<span>Best window " + hourLabel(night.hours[best.start]) + " to " +
+    hourLabel(night.hours[best.end], 1) + "</span>";
 
   timeline.innerHTML = "";
   night.hours.forEach((hour, i) => {
-    const col = document.createElement("div");
+    // Each hour is a button, so it works with mouse, touch and keyboard
+    const col = document.createElement("button");
+    col.type = "button";
     col.className = "hour";
-    col.innerHTML =
-      '<span class="hour__val">' + clear[i] + "</span>" +
-      '<div class="hour__bar" style="height:' + Math.max(clear[i], 2) + '%"></div>' +
-      '<span class="hour__t">' + hour.time.slice(11, 13) + "</span>";
+    if (i >= best.start && i <= best.end) col.classList.add("is-best");
+    if (i === 0 || i === night.hours.length - 1) col.classList.add("is-twilight");
+    col.setAttribute("aria-label", hourLabel(hour) + ", score " + scores[i]);
+
+    const val = document.createElement("span");
+    val.className = "hour__val";
+    val.textContent = scores[i];
+    const bar = document.createElement("span");
+    bar.className = "hour__bar";
+    bar.style.height = Math.max(scores[i], 2) + "%";
+    const time = document.createElement("span");
+    time.className = "hour__t";
+    time.textContent = hour.time.slice(11, 13);
+
+    col.append(val, bar, time);
+    col.addEventListener("click", () => selectHour(col, hour, scores[i]));
     timeline.append(col);
   });
 
-  // Read-out for the first dark hour (later: the hour the user clicks)
-  const first = night.hours[0];
+  // Start with the best hour selected
+  const bestCol = timeline.children[best.start];
+  selectHour(bestCol, night.hours[best.start], scores[best.start]);
+}
+
+// Show the details of one hour in the read-out below the timeline
+function selectHour(col, hour, score) {
+  timeline.querySelectorAll(".is-selected").forEach((el) => el.classList.remove("is-selected"));
+  col.classList.add("is-selected");
   readout.innerHTML =
-    item("Clouds low / mid / high", first.cloudLow + " / " + first.cloudMid + " / " + first.cloudHigh + " %") +
-    item("Humidity", first.humidity + " %") +
-    item("Visibility", (first.visibility / 1000).toFixed(1) + " km") +
-    item("Rain chance", first.rain + " %") +
-    item("Wind", first.wind + " km/h") +
-    item("Hours of night", night.hours.length);
+    item("Hour", hourLabel(hour) + " · score " + score) +
+    item("Clouds low / mid / high", hour.cloudLow + " / " + hour.cloudMid + " / " + hour.cloudHigh + " %") +
+    item("Humidity", hour.humidity + " %") +
+    item("Visibility", (hour.visibility / 1000).toFixed(1) + " km") +
+    item("Rain chance", hour.rain + " %") +
+    item("Wind", hour.wind + " km/h");
+}
+
+// "2026-09-29T23:00" -> "23:00"; with plusHours = 1 -> "00:00" (end of that hour)
+function hourLabel(hour, plusHours = 0) {
+  const h = (Number(hour.time.slice(11, 13)) + plusHours) % 24;
+  return String(h).padStart(2, "0") + ":00";
 }
 
 function item(label, value) {

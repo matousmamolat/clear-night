@@ -125,8 +125,25 @@ body > .top { z-index: 10; }
   border-bottom: 1px solid var(--line);
 }
 .timeline { background: repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px calc(100% / 48)) bottom / 100% 8px no-repeat; }
-.hour { position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; height: 100%; }
-.hour__bar { width: 3px; background: var(--ink); opacity: 0.45; min-height: 2px; }
+.hour {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.hour:focus-visible { outline: 1px solid var(--ink); outline-offset: 4px; }
+.hour:hover .hour__bar { opacity: 0.8; }
+.hour.is-selected .hour__t { color: var(--ink); }
+.hour.is-selected .hour__t::before { content: ""; position: absolute; top: -9px; left: 0; width: 3px; height: 3px; background: var(--ink); }
+.hour__bar { display: block; width: 3px; background: var(--ink); opacity: 0.45; min-height: 2px; }
 .hour__val { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-bottom: 6px; }
 .hour.is-best .hour__val { color: var(--good); }
 .hour.is-best .hour__bar { background: var(--good); opacity: 1; }
