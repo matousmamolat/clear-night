@@ -4,6 +4,7 @@
    Step 2: score every hour, find the best window, click an hour for details.
    Step 3: seven nights on a vertical axis, switch between them.
    Step 4: state in the URL (History API): reload, share, back and forward.
+   Step 5: favourite places in localStorage (save, rename, delete).
    ========================================================================== */
 
 // --- DOM elements we work with ---
@@ -18,6 +19,12 @@ const verdictEl = document.getElementById("verdict");
 const timeline = document.getElementById("timeline");
 const readout = document.getElementById("readout");
 const nightsList = document.getElementById("nights");
+const saveButton = document.getElementById("save-place");
+const placesToggle = document.getElementById("places-toggle");
+const placesPanel = document.getElementById("places-panel");
+const placesList = document.getElementById("places-list");
+const placesEmpty = document.getElementById("places-empty");
+const placesCount = document.getElementById("places-count");
 
 // --- Application state: everything the screen is built from ---
 const state = {
@@ -66,11 +73,19 @@ function showResults(items) {
 }
 
 // Close the results when clicking elsewhere or pressing Escape
+// composedPath() = the elements the click went through, remembered at the moment of the click.
+// (Checking event.target is not enough: "Rename" and "Delete" redraw the list,
+// so the clicked button is already gone from the page when this runs.)
 document.addEventListener("click", (event) => {
-  if (!form.contains(event.target)) resultsList.hidden = true;
+  const path = event.composedPath();
+  if (!path.includes(form)) resultsList.hidden = true;
+  if (!path.includes(placesPanel.parentElement)) togglePlaces(false);
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") resultsList.hidden = true;
+  if (event.key === "Escape") {
+    resultsList.hidden = true;
+    togglePlaces(false);
+  }
 });
 
 // ===== 2. Selecting a place and loading its forecast =====
@@ -102,6 +117,7 @@ async function loadPlace(place, nightIndex = 0) {
     }
     showNights();
     showNight(nightIndex);
+    updateSaveButton();
     return true;
   } catch (error) {
     statusText.textContent = "Could not load the forecast. Try again.";
@@ -292,6 +308,7 @@ function resetScreen() {
   nightsList.innerHTML = "";
   timeline.innerHTML = "";
   readout.innerHTML = "";
+  saveButton.hidden = true;
 }
 
 // Back / Forward buttons
@@ -300,7 +317,110 @@ window.addEventListener("popstate", readUrl);
 // Reload or a shared link: restore the state right away
 readUrl();
 
-// ===== 7. Live clock =====
+// ===== 7. Favourite places (localStorage, see places.js) =====
+
+// "Save place" / "Saved" next to the place name
+saveButton.addEventListener("click", () => {
+  if (isSaved(state.place)) {
+    removePlace(placeId(state.place));
+  } else {
+    addPlace(state.place);
+  }
+  updateSaveButton();
+  renderPlaces();
+});
+
+function updateSaveButton() {
+  const saved = isSaved(state.place);
+  saveButton.hidden = false;
+  saveButton.textContent = saved ? "Saved" : "Save place";
+  saveButton.classList.toggle("is-saved", saved);
+  saveButton.setAttribute("aria-pressed", saved);
+}
+
+// Open / close the list of places
+placesToggle.addEventListener("click", () => togglePlaces(placesPanel.hidden));
+
+function togglePlaces(open) {
+  placesPanel.hidden = !open;
+  placesToggle.setAttribute("aria-expanded", open);
+}
+
+// Draw the list: every row has the place, "Rename" and "Delete"
+function renderPlaces() {
+  const list = loadPlaces();
+  placesCount.textContent = list.length;
+  placesEmpty.hidden = list.length > 0;
+  placesList.innerHTML = "";
+
+  list.forEach((place) => {
+    const li = document.createElement("li");
+
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "places__open";
+    // textContent, not innerHTML: the label is typed by the user, so it must never be read as HTML
+    open.textContent = place.label;
+    if (place.label !== place.name) {
+      const original = document.createElement("small");
+      original.textContent = place.name;
+      open.append(" ", original);
+    }
+    open.addEventListener("click", async () => {
+      togglePlaces(false);
+      const loaded = await loadPlace({ name: place.label, country_code: place.country_code, latitude: place.latitude, longitude: place.longitude });
+      if (loaded) writeUrl(true);
+    });
+
+    const rename = document.createElement("button");
+    rename.type = "button";
+    rename.className = "places__action";
+    rename.textContent = "Rename";
+    rename.addEventListener("click", () => startRename(li, place));
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "places__action";
+    remove.textContent = "Delete";
+    remove.addEventListener("click", () => {
+      removePlace(place.id);
+      renderPlaces();
+      if (state.place) updateSaveButton();
+    });
+
+    li.append(open, rename, remove);
+    placesList.append(li);
+  });
+}
+
+// Replace the row with a text field; Enter saves, Escape cancels
+function startRename(li, place) {
+  const field = document.createElement("input");
+  field.type = "text";
+  field.value = place.label;
+  field.className = "places__field";
+  field.setAttribute("aria-label", "New name for " + place.label);
+  li.innerHTML = "";
+  li.append(field);
+  field.focus();
+  field.select();
+
+  field.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      renamePlace(place.id, field.value);
+      renderPlaces();
+    }
+    if (event.key === "Escape") {
+      event.stopPropagation(); // do not close the whole panel
+      renderPlaces();
+    }
+  });
+  field.addEventListener("blur", () => renderPlaces());
+}
+
+renderPlaces();
+
+// ===== 8. Live clock =====
 const clock = document.getElementById("clock");
 function tick() {
   clock.textContent = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });

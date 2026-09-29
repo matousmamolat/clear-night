@@ -19,10 +19,19 @@
       <button type="submit">Search</button>
       <ul class="search__results" id="search-results" hidden></ul>
     </form>
+    <div class="places">
+      <button class="places__toggle" id="places-toggle" type="button" aria-expanded="false" aria-controls="places-panel">
+        Places <span id="places-count">0</span>
+      </button>
+      <div class="places__panel" id="places-panel" hidden>
+        <p class="places__empty" id="places-empty">No saved places yet. Find a place and press “Save place”.</p>
+        <ul class="places__list" id="places-list"></ul>
+      </div>
+    </div>
   </header>
 
   <div class="corners">
-    <span id="place-name">No place selected</span>
+    <span><span id="place-name">No place selected</span> <button class="save" id="save-place" type="button" hidden>Save place</button></span>
     <span id="place-coords"></span>
   </div>
 
@@ -48,6 +57,7 @@
 
   <script src="js/api.js"></script>
   <script src="js/score.js"></script>
+  <script src="js/places.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

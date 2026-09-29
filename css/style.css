@@ -52,6 +52,7 @@ a { color: inherit; text-decoration: none; }
 body > * { position: relative; z-index: 1; }
 #sky { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; }
 body > .top { z-index: 10; }
+body > .corners { z-index: 3; } /* the big score overlaps this row, keep the Save button clickable */
 
 /* tick ruler along the top, like on Eclipse Space */
 .ruler {
@@ -263,6 +264,84 @@ body > .top { z-index: 10; }
 }
 .bottom a { text-decoration: underline; text-underline-offset: 0.2em; }
 
+
+/* --- save button next to the place name --- */
+.save {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--dim);
+  font: 500 10px var(--ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.save:hover, .save:focus-visible { color: var(--ink); border-color: var(--ink); outline: none; }
+.save.is-saved { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* --- favourite places --- */
+.top { gap: 16px; }
+.top .search { margin-left: auto; }
+.places { position: relative; }
+.places__toggle {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  font: 500 12px var(--ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.places__toggle span { margin-left: 6px; font-family: var(--mono); color: var(--dim); }
+.places__toggle[aria-expanded="true"], .places__toggle:hover { border-color: var(--ink); }
+.places__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  width: min(340px, 90vw);
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+.places__empty { margin: 0; padding: 12px; color: var(--dim); font-family: var(--mono); font-size: 12px; }
+.places__list { margin: 0; padding: 0; list-style: none; }
+.places__list li { display: flex; align-items: center; border-top: 1px solid var(--line); }
+.places__list li:first-child { border-top: 0; }
+.places__open {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 400 13px var(--ui);
+  text-align: left;
+  cursor: pointer;
+}
+.places__open small { margin-left: 6px; color: var(--dim); font-size: 11px; }
+.places__action {
+  padding: 10px 8px;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font: 400 11px var(--mono);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.places__open:hover, .places__open:focus-visible,
+.places__action:hover, .places__action:focus-visible { background: rgba(200, 214, 230, 0.08); color: var(--ink); outline: none; }
+.places__field {
+  flex: 1;
+  margin: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--ink);
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 13px var(--ui);
+}
+
 @media (max-width: 760px) {
   .stage { grid-template-columns: 1fr; gap: 24px; padding-top: 24px; }
   .nights { display: flex; gap: 18px; padding: 16px 0 0; overflow-x: auto; }
@@ -272,6 +351,7 @@ body > .top { z-index: 10; }
   .nights li::before { left: 0; top: 0; margin-top: 0; }
   .nights li.is-active::before { left: -2px; top: -2px; margin-top: 0; }
   .top { flex-wrap: wrap; gap: 12px; }
-  .search { width: 100%; }
+  .search { order: 3; width: 100%; }
+  .top .search { margin-left: 0; }
   .readout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
